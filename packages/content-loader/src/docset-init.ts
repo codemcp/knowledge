@@ -165,12 +165,13 @@ export async function initDocset(
       let fileCount = 0;
       const files: string[] = [];
       async function countFiles(dir: string): Promise<void> {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const fullPath = path.join(dir, entry.name);
-          if (entry.isDirectory()) {
+        const entries = await fs.readdir(dir);
+        for (const name of entries) {
+          const fullPath = path.join(dir, name);
+          const stat = await fs.stat(fullPath);
+          if (stat.isDirectory()) {
             await countFiles(fullPath);
-          } else if (entry.isFile()) {
+          } else if (stat.isFile()) {
             fileCount++;
             files.push(path.relative(localPath, fullPath));
           }
