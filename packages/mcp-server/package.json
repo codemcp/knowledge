@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.19.1",
-    "adm-zip": "0.5.17"
+    "adm-zip": "0.6.0"
   },
   "devDependencies": {
     "@codemcp/knowledge-content-loader": "workspace:*",
