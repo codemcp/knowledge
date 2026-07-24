@@ -12,8 +12,8 @@ importers:
         specifier: ^1.19.1
         version: 1.19.1
       adm-zip:
-        specifier: 0.5.17
-        version: 0.5.17
+        specifier: 0.6.0
+        version: 0.6.0
       commander:
         specifier: ^12.0.0
         version: 12.1.0
@@ -91,8 +91,8 @@ importers:
         specifier: ^1.11.5
         version: 1.19.1
       adm-zip:
-        specifier: 0.5.17
-        version: 0.5.17
+        specifier: 0.6.0
+        version: 0.6.0
       commander:
         specifier: ^12.0.0
         version: 12.1.0
@@ -140,8 +140,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       adm-zip:
-        specifier: 0.5.17
-        version: 0.5.17
+        specifier: 0.6.0
+        version: 0.6.0
       simple-git:
         specifier: ^3.22.0
         version: 3.28.0
@@ -211,8 +211,8 @@ importers:
         specifier: ^1.19.1
         version: 1.19.1
       adm-zip:
-        specifier: 0.5.17
-        version: 0.5.17
+        specifier: 0.6.0
+        version: 0.6.0
     devDependencies:
       '@codemcp/knowledge-content-loader':
         specifier: workspace:*
@@ -1685,9 +1685,9 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  adm-zip@0.5.17:
-    resolution: {integrity: sha512-+Ut8d9LLqwEvHHJl1+PIHqoyDxFgVN847JTVM3Izi3xHDWPE4UtzzXysMZQs64DMcrJfBeS/uoEP4AD3HQHnQQ==}
-    engines: {node: '>=12.0'}
+  adm-zip@0.6.0:
+    resolution: {integrity: sha512-XleryMhbuksdKtofnWZ9Sk+4CUTbms4Mb/EU32SZwToAyZ5RgVos/ki8n+yr0LWHOGKuakbXTuuYNHLQjhddgg==}
+    engines: {node: '>=14.0'}
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
@@ -4439,7 +4439,7 @@ snapshots:
 
   acorn@8.16.0: {}
 
-  adm-zip@0.5.17: {}
+  adm-zip@0.6.0: {}
 
   ajv@6.12.6:
     dependencies:
