@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge-content-loader",
-  "version": "2.2.10",
+  "version": "2.2.11",
   "description": "Web content loading and metadata management for agentic knowledge system",
   "type": "module",
   "main": "dist/index.js",
