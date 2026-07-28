@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge-core",
-  "version": "2.2.12",
+  "version": "2.2.13-load-docs.0",
   "description": "Core functionality for agentic knowledge guidance system",
   "type": "module",
   "main": "dist/index.js",
