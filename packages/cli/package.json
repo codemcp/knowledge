@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge-cli",
-  "version": "2.2.11",
+  "version": "2.2.12",
   "description": "Command-line interface for agentic knowledge web content management",
   "type": "module",
   "main": "dist/exports.js",
