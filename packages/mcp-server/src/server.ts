@@ -353,8 +353,11 @@ ${config.docsets.map((d) => `• **${d.id}** (${d.name})`).join("\n")}`,
                 'npx @codemcp/knowledge create --preset git-repo --id my-docs --name "My Docs" --url <repo-url>\n' +
                 "npx @codemcp/knowledge init my-docs\n\n" +
                 "**Option 2: Manual configuration**\n" +
-                "Create .knowledge/config.yaml in your project root.\n" +
-                "See the search_docs tool description for example configuration.",
+                "Create .knowledge/config.yaml in your project root or home directory.\n" +
+                "See the search_docs tool description for example configuration.\n\n" +
+                "**Option 3: Point at an existing configuration**\n" +
+                "Set PROJECT_DIR to the project, or KNOWLEDGE_SUBDIR to the\n" +
+                ".knowledge directory holding config.yaml.",
             );
           }
 
@@ -414,7 +417,8 @@ ${config.docsets.map((d) => `• **${d.id}** (${d.name})`).join("\n")}`,
                     "npx @codemcp/knowledge init my-docs\n" +
                     "```\n\n" +
                     "**Option 2: Manual configuration**\n" +
-                    "Create `.knowledge/config.yaml`:\n" +
+                    "Create `.knowledge/config.yaml` in the project or home directory\n" +
+                    "(`PROJECT_DIR` or `KNOWLEDGE_SUBDIR` override where the server looks):\n" +
                     "```yaml\n" +
                     'version: "1.0"\n' +
                     "docsets:\n" +

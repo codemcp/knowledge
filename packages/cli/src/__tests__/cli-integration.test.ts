@@ -42,7 +42,7 @@ docsets:
         url: "https://github.com/microsoft/TypeScript.git"
         branch: "main"
         paths: ["README.md"]
-    
+
   - id: "unsupported-source-docset"
     name: "Unsupported Source Documentation"
     description: "Test documentation with git repo source"
@@ -90,6 +90,14 @@ docsets:
           execSync(`node ${cliPath} status`, {
             encoding: "utf8",
             timeout: 5000,
+            // Keep the home directory fallback and env overrides out of this test
+            env: {
+              ...process.env,
+              HOME: emptyDir,
+              USERPROFILE: emptyDir,
+              KNOWLEDGE_SUBDIR: "",
+              PROJECT_DIR: "",
+            },
           });
         }).toThrow();
       } catch (error: any) {

@@ -4,8 +4,13 @@
 
 import { promises as fs } from "node:fs";
 import { load, dump } from "js-yaml";
-import type { KnowledgeConfig } from "../types.js";
-import { KnowledgeError, ErrorType } from "../types.js";
+import type { ConfigDiscoveryOptions, KnowledgeConfig } from "../types.js";
+import {
+  KnowledgeError,
+  ErrorType,
+  CONFIG_FILENAME,
+  CONFIG_SUBDIR_ENV,
+} from "../types.js";
 import { validateConfig } from "./loader.js";
 import { findConfigPath } from "./discovery.js";
 
@@ -27,6 +32,7 @@ export class ConfigManager {
    */
   async loadConfig(
     startDir?: string,
+    options?: ConfigDiscoveryOptions,
   ): Promise<{ config: KnowledgeConfig; configPath: string }> {
     const now = Date.now();
 
@@ -42,11 +48,11 @@ export class ConfigManager {
     }
 
     // Find and load fresh config
-    const configPath = await findConfigPath(startDir);
+    const configPath = await findConfigPath(startDir, options);
     if (!configPath) {
       throw new KnowledgeError(
         ErrorType.CONFIG_NOT_FOUND,
-        "No configuration file found. Please ensure .knowledge/config.yaml exists in your project.",
+        `No configuration file found. Please ensure .knowledge/${CONFIG_FILENAME} exists in your project or home directory, or set ${CONFIG_SUBDIR_ENV} to the directory holding it.`,
         { searchPath: startDir || process.cwd() },
       );
     }
@@ -194,10 +200,14 @@ export class ConfigManager {
   /**
    * Find configuration file path
    * @param startDir - Directory to start searching from
+   * @param options - Discovery options, see {@link findConfigPath}
    * @returns Path to config file or null if not found
    */
-  async findConfigPath(startDir?: string): Promise<string | null> {
-    return await findConfigPath(startDir);
+  async findConfigPath(
+    startDir?: string,
+    options?: ConfigDiscoveryOptions,
+  ): Promise<string | null> {
+    return await findConfigPath(startDir, options);
   }
 
   /**
@@ -210,10 +220,14 @@ export class ConfigManager {
   /**
    * Check if configuration exists
    * @param startDir - Directory to start searching from
+   * @param options - Discovery options, see {@link findConfigPath}
    * @returns True if config file exists
    */
-  async configExists(startDir?: string): Promise<boolean> {
-    const path = await this.findConfigPath(startDir);
+  async configExists(
+    startDir?: string,
+    options?: ConfigDiscoveryOptions,
+  ): Promise<boolean> {
+    const path = await this.findConfigPath(startDir, options);
     return path !== null;
   }
 }
