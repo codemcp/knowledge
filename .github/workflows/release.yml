@@ -121,7 +121,7 @@ jobs:
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]" || exit 0
           git push
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Create GitHub Release
         if: steps.version.outputs.new_tag
