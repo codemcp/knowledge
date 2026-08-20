@@ -237,3 +237,24 @@ export const CONFIG_FILENAME = "config.yaml";
  * Configuration directory name
  */
 export const CONFIG_DIR = ".knowledge";
+
+/**
+ * Environment variable holding an explicit path to the configuration directory
+ */
+export const CONFIG_SUBDIR_ENV = "KNOWLEDGE_SUBDIR";
+
+/**
+ * Environment variable holding the project directory to search upwards from
+ */
+export const PROJECT_DIR_ENV = "PROJECT_DIR";
+
+/**
+ * Options for configuration discovery
+ */
+export interface ConfigDiscoveryOptions {
+  /**
+   * Fall back to the config in the user's home directory when the directory
+   * tree holds none. Defaults to true.
+   */
+  includeHome?: boolean;
+}
