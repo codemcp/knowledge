@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge",
-  "version": "2.2.11",
+  "version": "2.2.16",
   "description": "A Model Context Protocol server for agentic knowledge guidance with web-based documentation loading and intelligent search instructions",
   "type": "module",
   "main": "packages/cli/dist/index.js",
