@@ -94,9 +94,12 @@ jobs:
         id: version
         uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v6.2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.generate_token.outputs.token }}
           default_bump: patch
           tag_prefix: v
+          release_branches: master,main
+          create_annotated_tag: false
+          fetch_all_tags: false
 
       - name: Update package.json version
         if: steps.version.outputs.new_tag
@@ -116,7 +119,7 @@ jobs:
           git config --local user.name "GitHub Action"
           git add package.json packages/*/package.json pnpm-lock.yaml
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]" || exit 0
-          git push
+          git push --force-with-lease origin main
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
@@ -130,7 +133,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Publish to npm
         if: steps.version.outputs.new_tag
@@ -141,3 +144,4 @@ jobs:
           pnpm --filter '@codemcp/knowledge' publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
