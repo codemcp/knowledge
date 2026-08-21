@@ -1,209 +1,270 @@
 #!/usr/bin/env node
 
 /**
- * Test Summary Script for Agentic Knowledge
- * Runs tests and provides an overview of results from all packages
+ * Test runner for Agentic Knowledge.
+ *
+ * Runs the test suite for every workspace package plus the root e2e suite and
+ * prints an aggregated summary.
+ *
+ * Design notes:
+ * - Child output is streamed straight through to this process's stdout/stderr
+ *   so failing assertions, stack traces and vitest diffs always end up in the
+ *   CI log. It is also buffered so the counts can be parsed for the summary.
+ * - Success/failure is decided by the child *exit code*, never by parsing.
+ *   Parsing is best-effort presentation only; a summary line we fail to
+ *   recognise can therefore never turn a red run green.
  */
 
-import { execSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
 
-function stripAnsiCodes(str) {
-  if (typeof str !== "string") return "";
-  return str.replace(/\x1b\[[0-9;]*m/g, "");
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+const ANSI_PATTERN = /\u001b\[[0-9;]*m/g;
+
+function stripAnsiCodes(value) {
+  return typeof value === "string" ? value.replace(ANSI_PATTERN, "") : "";
 }
 
-console.log("🧪 Running tests across all packages...\n");
+/**
+ * Spawn a command, streaming its output while also capturing it.
+ *
+ * @returns {Promise<{exitCode: number, output: string}>}
+ */
+function runCommand(command, args, cwd) {
+  return new Promise((resolvePromise) => {
+    const child = spawn(command, args, { cwd, env: process.env });
+    let output = "";
 
-// Dynamically detect all packages
-function getWorkspacePackages() {
-  const packages = [];
-  if (existsSync("packages")) {
-    const dirs = readdirSync("packages", { withFileTypes: true });
-    for (const dir of dirs) {
-      if (dir.isDirectory()) {
-        const pkgJsonPath = `packages/${dir.name}/package.json`;
-        if (existsSync(pkgJsonPath)) {
-          try {
-            const pkgJson = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
-            packages.push({ name: dir.name, fullName: pkgJson.name });
-          } catch (_e) {
-            // Skip invalid package.json files
-          }
-        }
-      }
+    const forward = (stream, sink) => {
+      stream.setEncoding("utf8");
+      stream.on("data", (chunk) => {
+        output += chunk;
+        sink.write(chunk);
+      });
+    };
+
+    forward(child.stdout, process.stdout);
+    forward(child.stderr, process.stderr);
+
+    child.on("error", (error) => {
+      process.stderr.write(`\nFailed to run ${command}: ${error.message}\n`);
+      resolvePromise({ exitCode: 1, output });
+    });
+
+    child.on("close", (code, signal) => {
+      resolvePromise({
+        exitCode: code ?? (signal ? 1 : 0),
+        output,
+      });
+    });
+  });
+}
+
+/**
+ * Parse the vitest `Tests ...` summary line.
+ *
+ * Handles every combination vitest emits, e.g.
+ *   Tests  12 passed (12)
+ *   Tests  1 failed | 30 passed (31)
+ *   Tests  1 failed | 11 skipped (12)
+ *   Tests  2 failed | 100 passed | 5 skipped (107)
+ *
+ * @returns {{passed: number, failed: number, skipped: number, todo: number, total: number} | null}
+ */
+function parseTestCounts(rawOutput) {
+  const lines = stripAnsiCodes(rawOutput).split("\n");
+
+  // Take the LAST matching line. "Test Files" never matches because `Tests`
+  // requires the trailing "s" followed by whitespace.
+  let summaryLine = null;
+  for (const line of lines) {
+    const match = line.match(/^\s*Tests\s+(\S.*?)\s*$/);
+    if (match) {
+      summaryLine = match[1];
     }
   }
+
+  if (summaryLine === null) {
+    return null;
+  }
+
+  const counts = { passed: 0, failed: 0, skipped: 0, todo: 0, total: 0 };
+  let sawAnyCount = false;
+
+  for (const match of summaryLine.matchAll(
+    /(\d+)\s+(passed|failed|skipped|todo)/g,
+  )) {
+    counts[match[2]] += Number(match[1]);
+    sawAnyCount = true;
+  }
+
+  if (!sawAnyCount) {
+    return null;
+  }
+
+  const totalMatch = summaryLine.match(/\((\d+)\)\s*$/);
+  counts.total = totalMatch
+    ? Number(totalMatch[1])
+    : counts.passed + counts.failed + counts.skipped + counts.todo;
+
+  return counts;
+}
+
+/** Discover every workspace package that exposes a `test` script. */
+function getWorkspacePackages() {
+  const packagesDir = join(repoRoot, "packages");
+  if (!existsSync(packagesDir)) {
+    return [];
+  }
+
+  const packages = [];
+  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const manifestPath = join(packagesDir, entry.name, "package.json");
+    if (!existsSync(manifestPath)) {
+      continue;
+    }
+
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      if (manifest.scripts?.test) {
+        packages.push({
+          label: manifest.name ?? entry.name,
+          cwd: join(packagesDir, entry.name),
+        });
+      }
+    } catch {
+      process.stderr.write(`Skipping unreadable manifest: ${manifestPath}\n`);
+    }
+  }
+
   return packages;
 }
 
-try {
-  // Get all workspace packages dynamically
-  const workspacePackages = getWorkspacePackages();
-
-  const packageResults = [];
-  let totalPassed = 0;
-  let totalTests = 0;
-
-  // Run tests for each workspace package
-  for (const pkg of workspacePackages) {
-    console.log(`Running ${pkg.fullName} tests...`);
-    try {
-      const pkgOutput = execSync(`cd packages/${pkg.name} && pnpm test`, {
-        encoding: "utf8",
-        stdio: "pipe",
-      });
-      // Match "Tests" specifically, not "Test Files"
-      const cleanPkgOutput = stripAnsiCodes(pkgOutput);
-      const pkgMatch = cleanPkgOutput.match(
-        /Tests\s+(\d+)\s+passed\s+\((\d+)\)/,
-      );
-      if (pkgMatch) {
-        const passed = parseInt(pkgMatch[1]);
-        const total = parseInt(pkgMatch[2]);
-        packageResults.push({ package: pkg.name, passed, total });
-        totalPassed += passed;
-        totalTests += total;
-      } else {
-        console.log(
-          `DEBUG: ${pkg.name} output:`,
-          cleanPkgOutput.split("\n").slice(-5).join("\n"),
-        );
-      }
-    } catch (err) {
-      // Parse error output
-      const errorObj = err;
-      const pkgOutput = errorObj.stdout || "";
-      const cleanOutput = stripAnsiCodes(pkgOutput);
-      const testMatch = cleanOutput.match(
-        /Tests\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\((\d+)\)/,
-      );
-      const passedOnlyMatch = cleanOutput.match(
-        /Tests\s+(\d+)\s+passed\s+\((\d+)\)/,
-      );
-
-      if (testMatch) {
-        // Some tests failed: "Tests  18 failed | 134 passed (152)"
-        const failed = parseInt(testMatch[1]);
-        const passed = parseInt(testMatch[2]);
-        const total = parseInt(testMatch[3]);
-        packageResults.push({ package: pkg.name, passed, total, failed });
-        totalPassed += passed;
-        totalTests += total;
-      } else if (passedOnlyMatch) {
-        // All tests passed
-        const passed = parseInt(passedOnlyMatch[1]);
-        const total = parseInt(passedOnlyMatch[2]);
-        packageResults.push({ package: pkg.name, passed, total });
-        totalPassed += passed;
-        totalTests += total;
-      } else {
-        // Truly no tests found or other error
-        console.log(`No tests found for ${pkg.fullName}`);
-      }
-    }
+function formatCounts(counts) {
+  if (!counts) {
+    return "no summary reported";
   }
 
-  // Run E2E tests
-  console.log("Running E2E tests...");
-  try {
-    const e2eOutput = execSync("pnpm vitest run test/e2e/", {
-      encoding: "utf8",
-      stdio: "pipe",
-    });
-    const cleanE2EOutput = stripAnsiCodes(e2eOutput);
-    const e2eMatch = cleanE2EOutput.match(/Tests\s+(\d+)\s+passed\s+\((\d+)\)/);
-    if (e2eMatch) {
-      const passed = parseInt(e2eMatch[1]);
-      const total = parseInt(e2eMatch[2]);
-      packageResults.push({ package: "e2e", passed, total });
-      totalPassed += passed;
-      totalTests += total;
-    } else {
-      console.log(
-        "DEBUG: E2E output:",
-        cleanE2EOutput.split("\n").slice(-5).join("\n"),
-      );
-    }
-  } catch (err) {
-    const errorObj = err;
-    const e2eOutput = errorObj.stdout || "";
-    const cleanOutput = stripAnsiCodes(e2eOutput);
-    const testMatch = cleanOutput.match(
-      /Tests\s+(\d+)\s+failed\s+\|\s+(\d+)\s+passed\s+\((\d+)\)/,
-    );
-    const passedOnlyMatch = cleanOutput.match(
-      /Tests\s+(\d+)\s+passed\s+\((\d+)\)/,
-    );
-
-    if (testMatch) {
-      const failed = parseInt(testMatch[1]);
-      const passed = parseInt(testMatch[2]);
-      const total = parseInt(testMatch[3]);
-      packageResults.push({ package: "e2e", passed, total, failed });
-      totalPassed += passed;
-      totalTests += total;
-    } else if (passedOnlyMatch) {
-      const passed = parseInt(passedOnlyMatch[1]);
-      const total = parseInt(passedOnlyMatch[2]);
-      packageResults.push({ package: "e2e", passed, total });
-      totalPassed += passed;
-      totalTests += total;
-    } else {
-      console.log("No E2E tests found or failed to parse output");
-    }
+  const parts = [`${counts.passed}/${counts.total} passed`];
+  if (counts.failed > 0) {
+    parts.push(`${counts.failed} failed`);
   }
-
-  console.log("\n" + "=".repeat(60));
-  console.log("📊 TEST SUMMARY");
-  console.log("=".repeat(60));
-
-  // Display results
-  for (const result of packageResults) {
-    if (result.package === "e2e") {
-      const status = result.passed === result.total ? "✅" : "❌";
-      console.log(
-        `${status} E2E Tests: ${result.passed}/${result.total} passed`,
-      );
-    } else {
-      const status = result.passed === result.total ? "✅" : "❌";
-      const packageDisplayName = result.package.replace("knowledge-", "");
-      console.log(
-        `${status} @codemcp/knowledge-${packageDisplayName}: ${result.passed}/${result.total} passed`,
-      );
-    }
+  if (counts.skipped > 0) {
+    parts.push(`${counts.skipped} skipped`);
   }
-
-  console.log("\n" + "-".repeat(60));
-  console.log(`📈 TOTAL RESULTS:`);
-  console.log(`   • Tests passed: ${totalPassed}`);
-  console.log(`   • Total tests: ${totalTests}`);
-  console.log(
-    `   • Success rate: ${totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : 0}%`,
-  );
-  console.log(`   • Packages tested: ${packageResults.length}`);
-
-  // Check if any tests failed or if no tests were found at all
-  if (totalTests === 0) {
-    console.log("\n❌ NO TESTS FOUND!");
-    console.log("=".repeat(60));
-    process.exit(1);
-  } else if (totalPassed < totalTests) {
-    console.log("\n❌ SOME TESTS FAILED!");
-    console.log("=".repeat(60));
-    process.exit(1);
-  } else {
-    console.log("\n🎉 All tests completed successfully!");
-    console.log("=".repeat(60));
+  if (counts.todo > 0) {
+    parts.push(`${counts.todo} todo`);
   }
-} catch (error) {
-  console.error("\n" + "=".repeat(60));
-  console.error("❌ TESTS FAILED");
-  console.error("=".repeat(60));
-  console.error(
-    "Error:",
-    error instanceof Error ? error.message : String(error),
-  );
-  console.error("=".repeat(60));
-  process.exit(1);
+  return parts.join(", ");
 }
+
+async function main() {
+  const targets = [
+    ...getWorkspacePackages(),
+    { label: "e2e", cwd: repoRoot, args: ["vitest", "run", "test/e2e/"] },
+  ];
+
+  const results = [];
+
+  for (const target of targets) {
+    const heading = `Running ${target.label} tests`;
+    console.log(`\n${"─".repeat(60)}`);
+    console.log(heading);
+    console.log(`${"─".repeat(60)}`);
+
+    const { exitCode, output } = await runCommand(
+      "pnpm",
+      target.args ?? ["test"],
+      target.cwd,
+    );
+
+    results.push({
+      label: target.label,
+      exitCode,
+      counts: parseTestCounts(output),
+    });
+  }
+
+  const line = "=".repeat(60);
+  console.log(`\n${line}`);
+  console.log("TEST SUMMARY");
+  console.log(line);
+
+  const totals = { passed: 0, failed: 0, skipped: 0, total: 0 };
+
+  for (const result of results) {
+    const ok = result.exitCode === 0;
+    console.log(
+      `${ok ? "PASS" : "FAIL"}  ${result.label}: ${formatCounts(result.counts)}` +
+        (ok ? "" : ` (exit code ${result.exitCode})`),
+    );
+
+    if (result.counts) {
+      totals.passed += result.counts.passed;
+      totals.failed += result.counts.failed;
+      totals.skipped += result.counts.skipped;
+      totals.total += result.counts.total;
+    }
+  }
+
+  console.log(`\n${"-".repeat(60)}`);
+  console.log("TOTAL RESULTS:");
+  console.log(`   - Suites run:   ${results.length}`);
+  console.log(`   - Tests passed: ${totals.passed}`);
+  console.log(`   - Tests failed: ${totals.failed}`);
+  console.log(`   - Tests skipped: ${totals.skipped}`);
+  console.log(`   - Total tests:  ${totals.total}`);
+
+  const failedSuites = results.filter((result) => result.exitCode !== 0);
+  const unparsedSuites = results.filter((result) => result.counts === null);
+
+  console.log(line);
+
+  if (failedSuites.length > 0) {
+    console.error("\nFAILED SUITES:");
+    for (const suite of failedSuites) {
+      console.error(`   - ${suite.label} (exit code ${suite.exitCode})`);
+    }
+    console.error(
+      "\nScroll up to the matching section above for the full failure output.",
+    );
+    console.error(line);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (totals.total === 0) {
+    console.error("\nNO TESTS WERE EXECUTED.");
+    console.error(line);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (unparsedSuites.length > 0) {
+    // Exit code says the suite passed, so this is a reporting warning only.
+    console.log(
+      `\nNote: could not parse a test summary for: ${unparsedSuites
+        .map((suite) => suite.label)
+        .join(", ")}`,
+    );
+  }
+
+  console.log("\nAll tests passed.");
+  console.log(line);
+}
+
+main().catch((error) => {
+  console.error("\n" + "=".repeat(60));
+  console.error("TEST RUNNER CRASHED");
+  console.error("=".repeat(60));
+  console.error(error instanceof Error ? error.stack : String(error));
+  console.error("=".repeat(60));
+  process.exitCode = 1;
+});
