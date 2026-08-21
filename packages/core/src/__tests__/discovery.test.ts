@@ -151,14 +151,14 @@ describe("Configuration Discovery", () => {
     test("should find config in home directory when the tree has none", async () => {
       const configPath = await writeConfig(homeDir);
 
-      const result = await findConfigPath(testDir);
+      const result = await findConfigPath(testDir, { includeHome: true });
       expect(result).toBe(configPath);
     });
 
     test("should find config in home directory (sync)", async () => {
       const configPath = await writeConfig(homeDir);
 
-      const result = findConfigPathSync(testDir);
+      const result = findConfigPathSync(testDir, { includeHome: true });
       expect(result).toBe(configPath);
     });
 
@@ -166,8 +166,24 @@ describe("Configuration Discovery", () => {
       const projectConfigPath = await writeConfig(testDir);
       await writeConfig(homeDir);
 
-      const result = await findConfigPath(testDir);
+      const result = await findConfigPath(testDir, { includeHome: true });
       expect(result).toBe(projectConfigPath);
+    });
+
+    test("should not use the home config unless asked to", async () => {
+      await writeConfig(homeDir);
+
+      expect(await findConfigPath(testDir)).toBeNull();
+      expect(findConfigPathSync(testDir)).toBeNull();
+      expect(await findConfigPath(testDir, { includeHome: false })).toBeNull();
+    });
+
+    test("should not consider the home config when the override points elsewhere", async () => {
+      await writeConfig(homeDir);
+      process.env[CONFIG_SUBDIR_ENV] = join(tempDir, "missing");
+
+      const result = await findConfigPath(testDir, { includeHome: true });
+      expect(result).toBeNull();
     });
   });
 

@@ -30,7 +30,8 @@ export async function createDocset(
   const configManager = new ConfigManager();
 
   // The home config is never a write target for a project that has none:
-  // creating a docset here would silently edit the user's global config
+  // creating a docset here would silently edit the user's global config.
+  // This is the default, spelled out because it is load-bearing here.
   const discovery = { includeHome: false };
   const configExists = await configManager.configExists(cwd, discovery);
   let config: { version: string; docsets: DocsetConfig[] };

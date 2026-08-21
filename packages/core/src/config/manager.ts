@@ -19,6 +19,7 @@ import { findConfigPath } from "./discovery.js";
  */
 export class ConfigManager {
   private configCache: {
+    key: string;
     config: KnowledgeConfig;
     configPath: string;
     loadTime: number;
@@ -28,6 +29,7 @@ export class ConfigManager {
   /**
    * Load configuration with caching
    * @param startDir - Directory to start searching from (defaults to cwd)
+   * @param options - Discovery options, see {@link findConfigPath}
    * @returns Configuration and path
    */
   async loadConfig(
@@ -35,10 +37,14 @@ export class ConfigManager {
     options?: ConfigDiscoveryOptions,
   ): Promise<{ config: KnowledgeConfig; configPath: string }> {
     const now = Date.now();
+    // The cache key covers the lookup, not just the instance: two lookups with
+    // different start directories or options must not share a resolved config
+    const cacheKey = `${startDir ?? ""}\u0000${options?.includeHome ?? false}`;
 
     // Return cached config if still valid
     if (
       this.configCache &&
+      this.configCache.key === cacheKey &&
       now - this.configCache.loadTime < this.CONFIG_CACHE_TTL
     ) {
       return {
@@ -52,7 +58,7 @@ export class ConfigManager {
     if (!configPath) {
       throw new KnowledgeError(
         ErrorType.CONFIG_NOT_FOUND,
-        `No configuration file found. Please ensure .knowledge/${CONFIG_FILENAME} exists in your project or home directory, or set ${CONFIG_SUBDIR_ENV} to the directory holding it.`,
+        `No configuration file found. Please ensure .knowledge/${CONFIG_FILENAME} exists in your project${options?.includeHome ? " or home directory" : ""}, or set ${CONFIG_SUBDIR_ENV} to the directory holding it.`,
         { searchPath: startDir || process.cwd() },
       );
     }
@@ -61,6 +67,7 @@ export class ConfigManager {
 
     // Cache the result
     this.configCache = {
+      key: cacheKey,
       config,
       configPath,
       loadTime: now,
@@ -160,13 +167,19 @@ export class ConfigManager {
    * Update paths for a specific docset with discovered files
    * @param docsetId - ID of docset to update
    * @param discoveredPaths - Array of file paths that were discovered
+   * @param configPath - Config file to update. Pass the path the caller already
+   *   resolved: re-running discovery here could pick a different file than the
+   *   one the docset was read from.
    * @returns Updated configuration
    */
   async updateDocsetPaths(
     docsetId: string,
     discoveredPaths: string[],
+    configPath?: string,
   ): Promise<KnowledgeConfig> {
-    const { config } = await this.loadConfig();
+    const config = configPath
+      ? await this.loadConfigFromPath(configPath)
+      : (await this.loadConfig()).config;
 
     // Find the docset to update
     const docset = config.docsets.find((d) => d.id === docsetId);
@@ -192,7 +205,7 @@ export class ConfigManager {
     }
 
     // Save updated configuration
-    await this.saveConfig(config);
+    await this.saveConfig(config, configPath);
 
     return config;
   }

@@ -43,10 +43,12 @@ interface RawSourceMetadata {
  */
 export async function getStatus(params?: StatusParams): Promise<StatusResult> {
   const cwd = params?.cwd ?? process.cwd();
-  const configPath = findConfigPathSync(cwd);
+  // Read-only: report on whichever config the other commands would use,
+  // including a machine-wide ~/.knowledge/config.yaml
+  const configPath = findConfigPathSync(cwd, { includeHome: true });
   if (!configPath) {
     throw new Error(
-      "No configuration file found. Ensure .knowledge/config.yaml exists in the project.",
+      "No configuration file found. Ensure .knowledge/config.yaml exists in the project or your home directory.",
     );
   }
 

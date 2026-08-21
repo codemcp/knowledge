@@ -44,19 +44,24 @@ function resolveStartPath(startPath?: string): string {
 }
 
 /**
- * Collect the config paths to probe, from startPath up to the filesystem root,
+ * Yield the config paths to probe, from startPath up to the filesystem root,
  * optionally followed by the user's home directory as a last resort. The home
  * fallback covers the same GUI-launch case when no project directory is known.
+ *
+ * Lazy on purpose: the caller stats each candidate and stops at the first hit,
+ * so the ancestor list is never materialised.
  */
-function candidateConfigPaths(
+function* candidateConfigPaths(
   startPath: string,
   includeHome: boolean,
-): string[] {
-  const paths: string[] = [];
+): Generator<string> {
+  const visited = new Set<string>();
   let currentDir = startPath;
 
   while (true) {
-    paths.push(configPathFor(currentDir));
+    const configPath = configPathFor(currentDir);
+    visited.add(configPath);
+    yield configPath;
 
     const parentDir = dirname(currentDir);
     if (parentDir === currentDir) {
@@ -68,22 +73,21 @@ function candidateConfigPaths(
 
   if (includeHome) {
     const homeConfigPath = configPathFor(homedir());
-    if (!paths.includes(homeConfigPath)) {
-      paths.push(homeConfigPath);
+    if (!visited.has(homeConfigPath)) {
+      yield homeConfigPath;
     }
   }
-
-  return paths;
 }
 
 /**
  * Find the configuration file, in this order: the KNOWLEDGE_SUBDIR override,
- * an upward walk from the start path, then the user's home directory
+ * an upward walk from the start path, then — only with `includeHome: true` —
+ * the user's home directory
  * @param startPath - Directory to start searching from. Defaults to PROJECT_DIR
  *   when set, otherwise the current working directory.
- * @param options - Discovery options. Pass `includeHome: false` when the caller
- *   is about to write to the config, so a home config cannot become the target
- *   for a project that has none.
+ * @param options - Discovery options. `includeHome` is opt-in (default `false`)
+ *   so that a home config never silently answers for a project that has none;
+ *   pass `true` where a shared, machine-wide config is a legitimate result.
  * @returns Path to config file or null if not found
  */
 export async function findConfigPath(
@@ -99,7 +103,7 @@ export async function findConfigPath(
 
   for (const configPath of candidateConfigPaths(
     resolveStartPath(startPath),
-    options.includeHome ?? true,
+    options.includeHome ?? false,
   )) {
     if (await isFile(configPath)) {
       return configPath;
@@ -127,7 +131,7 @@ export function findConfigPathSync(
 
   for (const configPath of candidateConfigPaths(
     resolveStartPath(startPath),
-    options.includeHome ?? true,
+    options.includeHome ?? false,
   )) {
     if (isFileSync(configPath)) {
       return configPath;
