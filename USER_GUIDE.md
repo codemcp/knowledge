@@ -329,6 +329,39 @@ npx @codemcp/knowledge refresh --config /path/to/config.yaml
 
 Place your configuration file at `.knowledge/config.yaml` in your project root.
 
+The configuration is resolved in this order:
+
+1. `KNOWLEDGE_SUBDIR`, if set: the directory holding `config.yaml` — usually the
+   `.knowledge` directory itself (`/path/to/project/.knowledge`), not a
+   subdirectory inside it and not the project root. When that directory has no
+   `config.yaml`, no configuration is loaded — the override is never silently
+   ignored.
+2. `config.yaml` in a `.knowledge` directory, searched upwards from
+   `PROJECT_DIR` if set, otherwise from the working directory.
+3. `~/.knowledge/config.yaml` in your home directory, as a shared fallback for
+   docsets you want available everywhere.
+
+Steps 1 and 3 exist because GUI launchers give the server a working directory
+that has nothing to do with your project: Claude Desktop reports
+`/Applications`, VS Code its own app bundle. Walking up from there reaches
+neither your project nor your home directory, so set `PROJECT_DIR` (or
+`KNOWLEDGE_SUBDIR`) in the server environment, or keep the docsets in
+`~/.knowledge/config.yaml`.
+
+The home fallback in step 3 is deliberate per command, never a blanket default:
+
+- The MCP server, `status`, `init` and `refresh` use it. They read or update a
+  docset that is already declared, so a machine-wide config is a valid answer —
+  otherwise docsets in `~/.knowledge/config.yaml` could only be managed from
+  your home directory.
+- `create` does not. Without a project configuration it creates
+  `.knowledge/config.yaml` in the current directory instead of appending the new
+  docset to your home configuration.
+
+`init` and `refresh` write to the configuration that declared the docset (and to
+the `.knowledge` directory beside it), so initialising a docset that only exists
+in `~/.knowledge/config.yaml` updates that file — the config you declared it in.
+
 ### Local Folder Sources
 
 For documentation stored locally in your project:
@@ -729,6 +762,12 @@ The AI assistant will:
 **Error**: "No configuration file found"
 
 **Solution**: Create `.knowledge/config.yaml` or the server will start with no docsets (shows setup instructions in tool descriptions).
+
+If the configuration exists but the server does not see it, the client most
+likely starts the server outside your project tree (a GUI launcher reports its
+own working directory). Set `PROJECT_DIR` to your project or `KNOWLEDGE_SUBDIR`
+to the `.knowledge` directory in the server's environment, or put the docsets in
+`~/.knowledge/config.yaml`.
 
 ### Docset Not Initialized
 

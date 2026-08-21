@@ -56,10 +56,12 @@ export async function refreshDocsets(
 ): Promise<RefreshResult> {
   const { docsetId, force = false, cwd = process.cwd() } = params ?? {};
 
-  const configPath = findConfigPathSync(cwd);
+  // Like init, refresh works on already declared docsets, so a machine-wide
+  // ~/.knowledge/config.yaml is a legitimate source to refresh from
+  const configPath = findConfigPathSync(cwd, { includeHome: true });
   if (!configPath) {
     throw new Error(
-      "No configuration file found. Ensure .knowledge/config.yaml exists in the project.",
+      "No configuration file found. Ensure .knowledge/config.yaml exists in the project or your home directory.",
     );
   }
 

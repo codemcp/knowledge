@@ -54,7 +54,9 @@ npx @codemcp/knowledge init react-docs
 
 **Option B: Manual Configuration**
 
-Create `.knowledge/config.yaml`:
+Create `.knowledge/config.yaml` (in your project, or in your home directory for
+docsets that should be available everywhere; `PROJECT_DIR` and
+`KNOWLEDGE_SUBDIR` override where the server looks):
 
 ```yaml
 version: "1.0"

@@ -74,8 +74,12 @@ export function createAgenticKnowledgeServer() {
     }
 
     try {
-      // Find configuration file path
-      const configPath = await findConfigPath();
+      // Find configuration file path. The server opts into the home fallback:
+      // its working directory is dictated by the GUI client that launched it
+      // (Claude Desktop reports /Applications, VS Code its own app bundle), so
+      // without PROJECT_DIR/KNOWLEDGE_SUBDIR the upward walk reaches nothing
+      // and ~/.knowledge/config.yaml is the only config it can find.
+      const configPath = await findConfigPath(undefined, { includeHome: true });
       if (!configPath) {
         return null; // No config file found - server can still start
       }
@@ -353,8 +357,11 @@ ${config.docsets.map((d) => `• **${d.id}** (${d.name})`).join("\n")}`,
                 'npx @codemcp/knowledge create --preset git-repo --id my-docs --name "My Docs" --url <repo-url>\n' +
                 "npx @codemcp/knowledge init my-docs\n\n" +
                 "**Option 2: Manual configuration**\n" +
-                "Create .knowledge/config.yaml in your project root.\n" +
-                "See the search_docs tool description for example configuration.",
+                "Create .knowledge/config.yaml in your project root or home directory.\n" +
+                "See the search_docs tool description for example configuration.\n\n" +
+                "**Option 3: Point at an existing configuration**\n" +
+                "Set PROJECT_DIR to the project, or KNOWLEDGE_SUBDIR to the\n" +
+                ".knowledge directory holding config.yaml.",
             );
           }
 
@@ -414,7 +421,8 @@ ${config.docsets.map((d) => `• **${d.id}** (${d.name})`).join("\n")}`,
                     "npx @codemcp/knowledge init my-docs\n" +
                     "```\n\n" +
                     "**Option 2: Manual configuration**\n" +
-                    "Create `.knowledge/config.yaml`:\n" +
+                    "Create `.knowledge/config.yaml` in the project or home directory\n" +
+                    "(`PROJECT_DIR` or `KNOWLEDGE_SUBDIR` override where the server looks):\n" +
                     "```yaml\n" +
                     'version: "1.0"\n' +
                     "docsets:\n" +
@@ -493,8 +501,12 @@ ${config.docsets.map((d) => `• **${d.id}** (${d.name})`).join("\n")}`,
           }
 
           const configManager = new ConfigManager();
+          // Same resolution as getConfiguration(): passing process.cwd()
+          // explicitly would defeat PROJECT_DIR, and this tool must initialise
+          // the docset in the config the other tools read from
           const { config, configPath } = await configManager.loadConfig(
-            process.cwd(),
+            undefined,
+            { includeHome: true },
           );
 
           // Invalidate config cache and search index cache so the next

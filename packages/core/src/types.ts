@@ -235,3 +235,31 @@ export const CONFIG_FILENAME = "config.yaml";
  * Configuration directory name
  */
 export const CONFIG_DIR = ".knowledge";
+
+/**
+ * Environment variable holding an explicit path to the configuration directory
+ */
+export const CONFIG_SUBDIR_ENV = "KNOWLEDGE_SUBDIR";
+
+/**
+ * Environment variable holding the project directory to search upwards from
+ */
+export const PROJECT_DIR_ENV = "PROJECT_DIR";
+
+/**
+ * Options for configuration discovery
+ */
+export interface ConfigDiscoveryOptions {
+  /**
+   * Fall back to the config in the user's home directory when the directory
+   * tree holds none. Opt-in, defaults to false: config normally lives with the
+   * project, and a silent home fallback would mask a missing project config.
+   *
+   * Set it to true where a machine-wide config is a legitimate answer — the MCP
+   * server (whose working directory is dictated by the GUI client that launched
+   * it) and the CLI commands that operate on an existing docset. Leave it off
+   * for anything that may *create* a config, so the home config cannot become
+   * the write target for a project that has none.
+   */
+  includeHome?: boolean;
+}
