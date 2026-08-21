@@ -1,5 +1,5 @@
 packages:
   - "packages/*"
 allowBuilds:
-  '@swc/core': true
-  esbuild: true
+  '@swc/core': false
+  esbuild: false
