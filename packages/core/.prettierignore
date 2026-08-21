@@ -1,3 +1,6 @@
+# Build output
+dist/
+
 # Test fixtures that are intentionally malformed
 src/__tests__/fixtures/malformed.yaml
 src/__tests__/fixtures/invalid-*.yaml

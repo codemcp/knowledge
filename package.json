@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge",
-  "version": "2.2.21",
+  "version": "2.2.22",
   "description": "A Model Context Protocol server for agentic knowledge guidance with web-based documentation loading and intelligent search instructions",
   "type": "module",
   "main": "packages/cli/dist/index.js",
@@ -34,8 +34,8 @@
     "clean": "turbo run clean:build",
     "prepublishOnly": "npm run build",
     "lint-staged": "npx lint-staged",
-    "test": "node scripts/test-summary.js",
-    "test:run": "node scripts/test-summary.js",
+    "test": "turbo run build && node scripts/test-summary.js",
+    "test:run": "turbo run build && node scripts/test-summary.js",
     "test:manual": "npm run build && npm run inspector",
     "test:e2e": "vitest run test/e2e/",
     "test:watch": "turbo run test",

@@ -74,9 +74,8 @@ docsets:
       expect(filesBefore).toContain("old-directory");
 
       // Import cleanup utilities to test the behavior
-      const { safelyClearDirectory, getDirectoryInfo } = await import(
-        "@codemcp/knowledge-core"
-      );
+      const { safelyClearDirectory, getDirectoryInfo } =
+        await import("@codemcp/knowledge-core");
 
       // Get directory info before clearing
       const dirInfoBefore = await getDirectoryInfo(docsetPath);
@@ -159,9 +158,8 @@ docsets:
       // 2. Analyze which directories contain the files
       // 3. Update config with directory patterns (not individual files)
 
-      const { discoverDirectoryPatterns } = await import(
-        "@codemcp/knowledge-core"
-      );
+      const { discoverDirectoryPatterns } =
+        await import("@codemcp/knowledge-core");
 
       // Simulate extracted files from a repository
       const extractedFiles = [
@@ -195,9 +193,8 @@ docsets:
       // - examples/basic.js
       // - examples/advanced.js
 
-      const { discoverDirectoryPatterns } = await import(
-        "@codemcp/knowledge-core"
-      );
+      const { discoverDirectoryPatterns } =
+        await import("@codemcp/knowledge-core");
 
       const extractedFiles = [
         "docs/guide/intro.md",
@@ -244,9 +241,8 @@ docsets:
       // --force: clear and re-initialize
       // --discover-paths: update config with discovered patterns
 
-      const { safelyClearDirectory, discoverDirectoryPatterns } = await import(
-        "@codemcp/knowledge-core"
-      );
+      const { safelyClearDirectory, discoverDirectoryPatterns } =
+        await import("@codemcp/knowledge-core");
 
       // Both functions should be available
       expect(safelyClearDirectory).toBeDefined();
@@ -264,9 +260,8 @@ describe("Path Pattern Discovery Function", () => {
   // Unit tests for the function that converts file lists to directory patterns
 
   it("should convert file list to directory patterns", async () => {
-    const { discoverDirectoryPatterns } = await import(
-      "@codemcp/knowledge-core"
-    );
+    const { discoverDirectoryPatterns } =
+      await import("@codemcp/knowledge-core");
 
     const files = [
       "README.md",
@@ -289,9 +284,8 @@ describe("Path Pattern Discovery Function", () => {
   });
 
   it("should handle nested directories efficiently", async () => {
-    const { discoverDirectoryPatterns } = await import(
-      "@codemcp/knowledge-core"
-    );
+    const { discoverDirectoryPatterns } =
+      await import("@codemcp/knowledge-core");
 
     const files = [
       "docs/en/guide/intro.md",
@@ -306,9 +300,8 @@ describe("Path Pattern Discovery Function", () => {
   });
 
   it("should keep single files as-is", async () => {
-    const { discoverDirectoryPatterns } = await import(
-      "@codemcp/knowledge-core"
-    );
+    const { discoverDirectoryPatterns } =
+      await import("@codemcp/knowledge-core");
 
     const files = [
       "README.md",
@@ -326,9 +319,8 @@ describe("Path Pattern Discovery Function", () => {
   });
 
   it("should handle files in root directory", async () => {
-    const { discoverDirectoryPatterns } = await import(
-      "@codemcp/knowledge-core"
-    );
+    const { discoverDirectoryPatterns } =
+      await import("@codemcp/knowledge-core");
 
     const files = ["README.md", "CONTRIBUTING.md", "LICENSE"];
 

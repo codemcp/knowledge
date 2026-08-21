@@ -51,9 +51,7 @@ export interface ArchiveSourceConfig extends BaseSourceConfig {
  * Union type for all source configurations
  */
 export type SourceConfig =
-  | LocalFolderSourceConfig
-  | GitRepoSourceConfig
-  | ArchiveSourceConfig;
+  LocalFolderSourceConfig | GitRepoSourceConfig | ArchiveSourceConfig;
 
 /**
  * Configuration for a single docset
