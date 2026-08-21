@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge-cli",
-  "version": "2.2.9",
+  "version": "2.2.21",
   "description": "Command-line interface for agentic knowledge web content management",
   "type": "module",
   "main": "dist/exports.js",
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.5",
-    "adm-zip": "0.5.17",
+    "adm-zip": "0.6.0",
     "commander": "^12.0.0"
   },
   "devDependencies": {

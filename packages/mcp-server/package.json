@@ -1,6 +1,6 @@
 {
   "name": "@codemcp/knowledge-server",
-  "version": "2.2.9",
+  "version": "2.2.21",
   "description": "Lightweight MCP server for agentic knowledge guidance",
   "type": "module",
   "main": "dist/index.js",
@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.19.1",
-    "adm-zip": "0.5.17"
+    "adm-zip": "0.6.0"
   },
   "devDependencies": {
     "@codemcp/knowledge-content-loader": "workspace:*",
