@@ -33,7 +33,14 @@ export async function initDocset(
   } = params;
 
   const configManager = new ConfigManager();
-  const { config, configPath } = await configManager.loadConfig(cwd);
+  // init operates on a docset that is already declared somewhere, so the home
+  // config is a legitimate source: docsets meant to be available everywhere
+  // live in ~/.knowledge/config.yaml and must be initialisable from any
+  // directory. Writes (metadata, .gitignore, discovered paths) go to the
+  // config that declared the docset — never to a config the user did not mean.
+  const { config, configPath } = await configManager.loadConfig(cwd, {
+    includeHome: true,
+  });
 
   ensureKnowledgeGitignoreSync(configPath);
 
@@ -61,7 +68,7 @@ export async function initDocset(
     if (allFiles.length > 0) {
       const discovered = discoverDirectoryPatterns(allFiles);
       try {
-        await configManager.updateDocsetPaths(docsetId, discovered);
+        await configManager.updateDocsetPaths(docsetId, discovered, configPath);
       } catch {
         // Non-fatal: surface the discovered paths even if config update failed.
       }
