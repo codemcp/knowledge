@@ -9,7 +9,13 @@
     "ade-knowledge-server": "dist/bin.js"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codemcp/knowledge.git",
+    "directory": "packages/mcp-server"
   },
   "exports": {
     ".": {
